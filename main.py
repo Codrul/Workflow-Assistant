@@ -1,5 +1,4 @@
-# Let's start by creating the main function 
-import sys 
+# this is where the magic begins
 from gui import launch_gui
 
 def main():

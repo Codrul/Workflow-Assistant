@@ -1,8 +1,10 @@
 import customtkinter
-import tkinter
 from tkinter import filedialog, messagebox, ttk
 import os
 import subprocess
+
+# taking stuff from func.py
+from func import load_config, open_by_alias
 
 customtkinter.set_appearance_mode('dark')
 customtkinter.set_default_color_theme('blue')
@@ -49,15 +51,14 @@ def on_app_selected(choice):
         messagebox.showerror("Error", f"Path for {choice} not found.")
 
 
+# GUI
 tabview = customtkinter.CTkTabview(app)
 tabview.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
 
 tabview.add('tab 1')
 tabview.add('tab 2')
 tabview.add('tab 3')
-
 tabview.set('tab 1')
-
 
 button1 = customtkinter.CTkButton(tabview.tab('tab 1'), text='Nothing', command=button1)
 button1.grid(row=0, column=0, padx=10, pady=10)
@@ -76,7 +77,19 @@ tabview.tab('tab 2').grid_columnconfigure(0, weight=1)
 
 
 file_picker_button = customtkinter.CTkButton(tabview.tab('tab 3'), text='Select a file', command=open_filexplorer)
-file_picker_button.grid(row=0, column=0, padx=10, pady=10)
+file_picker_button.grid(row=0, column=0,padx=10, pady=10)
+
+config_data = load_config()
+alias_names = list(config_data.keys())
+
+def on_config_selected(choice):
+    open_by_alias(choice)
+
+config_dropdown = ttk.Combobox(tabview.tab('tab 3'),
+                               values=alias_names,
+                               width=60)
+config_dropdown.bind("<<ComboboxSelected>>", lambda e: on_config_selected(config_dropdown.get()))
+config_dropdown.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
 
 
 app.grid_rowconfigure(0, weight=1)
