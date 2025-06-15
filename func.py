@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 
 
+
 CONFIG_PATH = Path("config.json")
 def load_config():
     try:
@@ -28,8 +29,27 @@ def open_by_alias(alias):
     else:
         print(f'Alias {alias} not found!')
 
-def launch_selected(event):
+def launch_selected(event, combo, config):
     selected = combo.get()
     path = config.get(selected)
     if path:
         open_file(path)
+
+
+def save_app_path(app_name, path):
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, "r") as f:
+            config = json.load(f)
+    else:
+        config = {}
+
+    config[app_name] = path
+
+    with open(CONFIG_PATH, 'w') as f:
+        json.dump(config, f, indent=4)
+
+def open_saved_app():
+    with open(CONFIG_PATH, 'r') as f:
+        app_dict = json.load(f)
+    app_names = list(app_dict.keys())
+    return app_names
