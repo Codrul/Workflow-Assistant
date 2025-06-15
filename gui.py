@@ -1,98 +1,76 @@
 import customtkinter
-from tkinter import filedialog, messagebox, ttk
-import os
-import subprocess
+from tkinter import filedialog
 
-# taking stuff from func.py
-from func import load_config, open_by_alias
+from func import save_app_path, open_saved_app, launch_selected, load_config
 
 customtkinter.set_appearance_mode('dark')
 customtkinter.set_default_color_theme('blue')
+
+combo = None
+
 app = customtkinter.CTk()
 app.title('Workflow Assistant')
 app.geometry('900x600')
 
-def show_timed_message(parent, message, timeout=500000):
-    popup = customtkinter.CTkToplevel(parent)
-    popup.geometry("300x100")
-    popup.title("Info")
+def open_file_explorer():
+    file_path = filedialog.askopenfilename(
+        title = "Select an application",
+        filetypes =[('Executable files', '*.exe')]
+    )
+    if file_path:
+        choose_name_popup(file_path)
 
-    label = customtkinter.CTkLabel(popup, text=message)
-    label.pack(expand=True, padx=20, pady=20)
+def choose_name_popup(file_path):
+    popup = customtkinter.CTkToplevel(app)
+    popup.title('What''s your application called?')
+    popup.geometry('300x200')
 
-    popup.after(timeout, popup.destroy)
+    popup.transient(app)
+    popup.focus()
 
-def open_filexplorer():
-    file_path = filedialog.askopenfilename(title='Select a file')
+    label = customtkinter.CTkLabel(popup, text= 'Enter the name of your application: ')
+    label.pack(pady=10)
 
-def button1():
-    print('This does absolutely nothing')
+    entry = customtkinter.CTkEntry(popup, width=200)
+    entry.pack(pady=5)
 
-def scan_apps():
-    program_dirs = [r"C:\Program Files", r"C:\Program Files (x86)"]
-    apps = []
-    for dir_path in program_dirs:
-        if os.path.exists(dir_path):
-            for root, dirs, files in os.walk(dir_path):
-                for file in files:
-                    if file.lower().endswith('.exe'):
-                        apps.append(os.path.join(root, file))
-    return apps
+    def on_submit():
+        app_name = entry.get().strip()
+        if app_name:
+            save_app_path(app_name, file_path)
+            status_label.configure(text=f'Saved {app_name} with {file_path}')
+            popup.destroy()
+        else:
+            entry.configure(placeholder_text='Please enter a valid name')
 
-def on_app_selected(choice):
-    full_path = next((app for app in apps if os.path.basename(app) == choice), None)
-    if full_path:
-        try:
-            subprocess.Popen([full_path])
-            show_timed_message(app, f"Launching {choice}", timeout=1500)
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to launch {choice}:\n{e}")
-    else:
-        messagebox.showerror("Error", f"Path for {choice} not found.")
+        global combo
+        new_config_keys = load_config()
+        new_app_names = list(new_config_keys)
+        combo.configure(values=new_app_names)
 
-
-# GUI
-tabview = customtkinter.CTkTabview(app)
-tabview.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-
-tabview.add('tab 1')
-tabview.add('tab 2')
-tabview.add('tab 3')
-tabview.set('tab 1')
-
-button1 = customtkinter.CTkButton(tabview.tab('tab 1'), text='Nothing', command=button1)
-button1.grid(row=0, column=0, padx=10, pady=10)
+    submit_button = customtkinter.CTkButton(popup, text= 'Save', command=on_submit)
+    submit_button.pack(pady=10)
 
 
-apps = scan_apps()
-app_names = [os.path.basename(app) for app in apps]
+#selection button
+select_button = customtkinter.CTkButton(app, text= 'Add application', command = open_file_explorer)
+select_button.pack(pady=40)
 
-dropdown = ttk.Combobox(tabview.tab('tab 2'),
-                        values=app_names,
-                        width=60)
-dropdown.bind("<<ComboboxSelected>>", lambda e: on_app_selected(dropdown.get()))
-dropdown.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+#status label
+status_label = customtkinter.CTkLabel(app, text='No application selected yet')
+status_label.pack()
 
-tabview.tab('tab 2').grid_columnconfigure(0, weight=1)
+#open apps dropdown
+config = load_config()  # This gives you the {app_name: path} dict
+app_names = list(config.keys())
+combo = customtkinter.CTkOptionMenu(app, values=app_names, width=300)
+combo.place(x=20, y=20)
 
-
-file_picker_button = customtkinter.CTkButton(tabview.tab('tab 3'), text='Select a file', command=open_filexplorer)
-file_picker_button.grid(row=0, column=0,padx=10, pady=10)
-
-config_data = load_config()
-alias_names = list(config_data.keys())
-
-def on_config_selected(choice):
-    open_by_alias(choice)
-
-config_dropdown = ttk.Combobox(tabview.tab('tab 3'),
-                               values=alias_names,
-                               width=60)
-config_dropdown.bind("<<ComboboxSelected>>", lambda e: on_config_selected(config_dropdown.get()))
-config_dropdown.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
-
-
-app.grid_rowconfigure(0, weight=1)
-app.grid_columnconfigure(0, weight=1)
+launch_button = customtkinter.CTkButton(
+    app,
+    text= 'Open application',
+    command= lambda: launch_selected(None, combo, config)
+)
+launch_button.pack(pady=10)
 
 app.mainloop()
